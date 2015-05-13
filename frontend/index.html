@@ -7,6 +7,8 @@
     <body>
 
         <div id="climateChart" style="height: 300px; width:100%;"></div>
+
+        <div id="ambientChart" style="height: 300px; width:100%;"></div>
         
     </body>
     <script src="canvasjs.min.js" type="text/javascript"></script>
@@ -83,6 +85,79 @@
             chart.render();     
 
         };
+
+
+        // Ambient data
+        var lightData = []; // dataPoints
+        var soundData = []; // dataPoints
+
+        var chart = new CanvasJS.Chart("ambientChart",{
+            title :{
+                text: "Live Ambient Data"
+            },
+            axisY:{ 
+                title: "Light",
+                includeZero: false,
+                lineColor: "#369EAD"        
+            },
+            axisY2:{ 
+                title: "Sound",
+                includeZero: false,
+                lineColor: "#C24642"
+            },          
+            data: [
+                {
+                    name: "Light",
+                    type: "line",
+                    xValueType: "dateTime",
+                    showInLegend: true,
+                    dataPoints: lightData 
+                },
+                {
+                    name: "Sound",
+                    type: "line",
+                    xValueType: "dateTime",
+                    axisYType: "secondary",
+                    showInLegend: true,
+                    dataPoints: soundData 
+                }
+            ]
+        });
+
+        var xVal = 0;
+        var yVal = 100; 
+        var dataLength = 500; // number of dataPoints visible at any point
+
+        var updateAmbientChart = function (jsonData) {
+
+            var data = JSON.parse(jsonData);
+
+            lightData.push({
+                x: data.time,
+                y: parseFloat(data.light),
+            });
+
+            soundData.push({
+                x: data.time,
+                y: parseFloat(data.sound)
+            });
+
+
+            if (lightData.length > dataLength)
+            {
+                lightData.shift();                
+            }
+            
+            if (soundData.length > dataLength)
+            {
+                soundData.shift();                
+            }
+
+            chart.render();     
+
+        };
+
+
     </script>
     <script>
         client = mqtt.connect('ws://test.mosca.io');
@@ -91,11 +166,22 @@
             console.log("Connected to MQTT broker.");
 
             client.subscribe('jsday/tessel_climate');
+            client.subscribe('jsday/tessel_ambient');
 
             client.on('message', function (topic, message) {
-                updateClimateChart(message.toString());
-            });
+                switch (topic) {
+                    case 'jsday/tessel_climate':
+                        updateClimateChart(message.toString());
+                        break;
+                    
+                    case 'jsday/tessel_ambient':
+                        updateAmbientChart(message.toString());
+                        break;
 
+                    default:
+                        break;
+                }
+            });
         });
 
     </script>
