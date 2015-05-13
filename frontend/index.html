@@ -1,0 +1,102 @@
+<!doctype html>
+<html>
+    <head>
+        <title>Climate demo</title>
+        <meta charset="utf-8">
+    </head>
+    <body>
+
+        <div id="climateChart" style="height: 300px; width:100%;"></div>
+        
+    </body>
+    <script src="canvasjs.min.js" type="text/javascript"></script>
+    <script src="http://test.mosca.io/mqtt.js"></script>
+
+    <script>
+        var tempData = []; // dataPoints
+        var humidData = []; // dataPoints
+
+        var chart = new CanvasJS.Chart("climateChart",{
+            title :{
+                text: "Live Climate Data"
+            },
+            axisY:{ 
+                title: "Temperature",
+                includeZero: false,
+                suffix : " ℃",
+                lineColor: "#369EAD"        
+            },
+            axisY2:{ 
+                title: "Humidity",
+                includeZero: false,
+                suffix : " %",
+                lineColor: "#C24642"
+            },          
+            data: [
+                {
+                    name: "Temperature",
+                    type: "line",
+                    xValueType: "dateTime",
+                    showInLegend: true,
+                    dataPoints: tempData 
+                },
+                {
+                    name: "Humidity",
+                    type: "line",
+                    xValueType: "dateTime",
+                    axisYType: "secondary",
+                    showInLegend: true,
+                    dataPoints: humidData 
+                }
+            ]
+        });
+
+        var xVal = 0;
+        var yVal = 100; 
+        var dataLength = 500; // number of dataPoints visible at any point
+
+        var updateClimateChart = function (jsonData) {
+
+            var data = JSON.parse(jsonData);
+
+            tempData.push({
+                x: data.time,
+                y: parseFloat(data.temp),
+            });
+
+            humidData.push({
+                x: data.time,
+                y: parseFloat(data.humid)
+            });
+
+
+            if (tempData.length > dataLength)
+            {
+                tempData.shift();                
+            }
+            
+            if (humidData.length > dataLength)
+            {
+                humidData.shift();                
+            }
+
+            chart.render();     
+
+        };
+    </script>
+    <script>
+        client = mqtt.connect('ws://test.mosca.io');
+
+        client.on('connect', function () {
+            console.log("Connected to MQTT broker.");
+
+            client.subscribe('jsday/tessel_climate');
+
+            client.on('message', function (topic, message) {
+                updateClimateChart(message.toString());
+            });
+
+        });
+
+    </script>
+</html>
